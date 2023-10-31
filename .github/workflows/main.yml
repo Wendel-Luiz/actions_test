@@ -19,6 +19,32 @@ jobs:
         id: semantic
         uses: paulhatch/semantic-version@v5.3.0
 
+      - name: Generate changelog
+        if: steps.publish.outputs.type != 'none'
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v2.9.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          fromTag: "${{ env.last_tag }}"
+          toTag: ${{ github.ref }}
+          commitMode: true
+          configuration: changelog_config.json
+
+      - name: Create release
+        if: steps.publish.outputs.type != 'none'
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.semantic.outputs.version }}
+          release_name: v${{ steps.semantic.outputs.version }}
+          commitish: ${{ github.ref }}
+          body: ${{steps.github_release.outputs.changelog}}
+          draft: false
+          prerelease: false
+
       - name: Outputing the version
         run: |
           echo ${{ steps.semantic.outputs.version }}
